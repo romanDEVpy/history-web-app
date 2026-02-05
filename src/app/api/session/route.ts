@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { incrementActiveUsers, getActiveUsers } from "@/lib/redis";
 
-export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 export async function POST() {
   const count = await incrementActiveUsers();

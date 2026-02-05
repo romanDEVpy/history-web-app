@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { voteBeard, getBeardVotes } from "@/lib/redis";
 
-export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   const body = await req.json();
