@@ -9,7 +9,7 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center text-white">
+    <div className="relative flex min-h-screen flex-col items-center justify-center text-slate-800">
       <LiquidBackground />
 
       <div className="relative z-10 flex flex-col items-center px-6 text-center">
@@ -30,13 +30,13 @@ export default function Home() {
         >
           Великое
           <br />
-          <span className="bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-600 bg-clip-text text-transparent">
             Преобразование
           </span>
         </motion.h1>
 
         <motion.p
-          className="mt-4 max-w-md text-lg text-white/40"
+          className="mt-4 max-w-md text-lg text-slate-500"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.8 }}
@@ -69,9 +69,9 @@ export default function Home() {
           transition={{ delay: 1.2 }}
         >
           <GlassCard className="px-6 py-3">
-            <p className="font-mono text-xs text-white/30">
+            <p className="font-mono text-xs text-slate-400">
               Откройте{" "}
-              <span className="text-amber-300/60">/play</span> на телефонах
+              <span className="text-amber-600">/play</span> на телефонах
               участников
             </p>
           </GlassCard>

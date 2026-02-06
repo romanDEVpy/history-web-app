@@ -24,7 +24,7 @@ export default function LiquidBlob({
   const baseHue = 220 - progress * 175;
   // Vote ratio shifts saturation: negative = desaturated, positive = vivid gold
   const sat = 50 + voteRatio * 30;
-  const light = 40 + progress * 15;
+  const light = 52 + progress * 12;
 
   const color1 = `hsl(${baseHue}, ${sat}%, ${light}%)`;
   const color2 = `hsl(${baseHue + 30}, ${sat + 10}%, ${light + 10}%)`;

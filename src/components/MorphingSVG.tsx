@@ -43,7 +43,7 @@ export default function MorphingSVG({
       <motion.path
         d={paths[0]}
         fill={color}
-        stroke="rgba(255,255,255,0.1)"
+        stroke="rgba(0,0,0,0.08)"
         strokeWidth={0.5}
         animate={{ d: paths }}
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
@@ -51,7 +51,7 @@ export default function MorphingSVG({
       <motion.path
         d={paths[0]}
         fill="none"
-        stroke="rgba(255,255,255,0.06)"
+        stroke="rgba(0,0,0,0.04)"
         strokeWidth={1}
         animate={{ d: [...paths].reverse() }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
