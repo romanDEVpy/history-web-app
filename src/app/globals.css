@@ -9,9 +9,7 @@
   --foreground: #e2e8f0;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html {
   scroll-behavior: smooth;
@@ -26,31 +24,69 @@ body {
   overflow-x: hidden;
 }
 
-/* Serif heading utility */
 .font-serif {
   font-family: 'Playfair Display', Georgia, serif;
 }
 
-/* Safe area for mobile notch */
 .safe-area-inset {
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
+/* ── Custom scrollbar ────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 2px; }
+
+/* ── Selection ───────────────────────────────────────────── */
+::selection { background: rgba(161, 130, 50, 0.3); color: #fbbf24; }
+
+/* ── Range slider "liquid" style ─────────────────────────── */
+.slider-liquid {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 12px;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
 }
 
-/* Selection */
-::selection {
-  background: rgba(161, 130, 50, 0.3);
-  color: #fbbf24;
+.slider-liquid::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f59e0b, #d97706);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0,0,0,0.3);
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.slider-liquid::-webkit-slider-thumb:active {
+  transform: scale(1.15);
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.6), 0 2px 12px rgba(0,0,0,0.4);
+  cursor: grabbing;
+}
+
+.slider-liquid::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f59e0b, #d97706);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0,0,0,0.3);
+  cursor: grab;
+}
+.slider-liquid::-moz-range-thumb:active {
+  transform: scale(1.15);
+  cursor: grabbing;
+}
+
+/* ── Glow text utility ───────────────────────────────────── */
+.text-glow-gold {
+  text-shadow: 0 0 20px rgba(245, 158, 11, 0.3), 0 0 40px rgba(245, 158, 11, 0.15);
+}
+.text-glow-blue {
+  text-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.15);
 }

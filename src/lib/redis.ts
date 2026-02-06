@@ -1,13 +1,5 @@
 import { Redis } from "@upstash/redis";
 
-// -------------------------------------------------------------------
-// Upstash Redis client with in-memory fallback.
-// Supports both naming conventions:
-//   - UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN  (Upstash direct)
-//   - KV_REST_API_URL / KV_REST_API_TOKEN                (Vercel KV)
-// Without valid credentials the app uses an in-memory store.
-// -------------------------------------------------------------------
-
 const REDIS_URL =
   process.env.UPSTASH_REDIS_REST_URL ||
   process.env.KV_REST_API_URL ||
@@ -27,22 +19,13 @@ let redis: Redis | null = null;
 
 function getRedis(): Redis {
   if (redis) return redis;
-  redis = new Redis({
-    url: REDIS_URL,
-    token: REDIS_TOKEN,
-  });
+  redis = new Redis({ url: REDIS_URL, token: REDIS_TOKEN });
   return redis;
 }
 
-// ── In-memory fallback store (single-process, resets on redeploy) ───
+// ── In-memory fallback ──────────────────────────────────────────────
 
-const mem: Record<string, number> = {
-  current_slide: 0,
-  active_users: 0,
-  ship_taps: 0,
-  beard_vote_yes: 0,
-  beard_vote_no: 0,
-};
+const mem: Record<string, number> = {};
 
 const memory = {
   get: (key: string): number => mem[key] ?? 0,
@@ -51,143 +34,110 @@ const memory = {
   incrby: (key: string, n: number): number => { mem[key] = (mem[key] ?? 0) + n; return mem[key]; },
 };
 
-// ── Key helpers ─────────────────────────────────────────────────────
+// ── Keys ────────────────────────────────────────────────────────────
 
-const KEYS = {
-  currentSlide: "current_slide",
-  activeUsers: "active_users",
-  shipTaps: "ship_taps",
-  beardVoteYes: "beard_vote_yes",
-  beardVoteNo: "beard_vote_no",
+const K = {
+  slide: "s:slide",
+  users: "s:users",
+  shipTaps: "s:ship_taps",
+  beardYes: "s:beard_yes",
+  beardNo: "s:beard_no",
+  senateSum: "s:senate_sum",
+  senateCount: "s:senate_cnt",
+  quizA: "s:quiz_a",
+  quizB: "s:quiz_b",
+  quizC: "s:quiz_c",
+  quizD: "s:quiz_d",
+  cityTaps: "s:city_taps",
+  indA: "s:ind_a",
+  indB: "s:ind_b",
+  indC: "s:ind_c",
+  indD: "s:ind_d",
 } as const;
+
+const ALL_KEYS = Object.values(K);
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+async function rGet(key: string): Promise<number> {
+  if (!USE_REAL_REDIS) return memory.get(key);
+  try { return (await getRedis().get<number>(key)) ?? 0; } catch { return memory.get(key); }
+}
+
+async function rSet(key: string, val: number): Promise<void> {
+  if (!USE_REAL_REDIS) { memory.set(key, val); return; }
+  try { await getRedis().set(key, val); } catch { memory.set(key, val); }
+}
+
+async function rIncr(key: string): Promise<number> {
+  if (!USE_REAL_REDIS) return memory.incr(key);
+  try { return await getRedis().incr(key); } catch { return memory.incr(key); }
+}
+
+async function rIncrBy(key: string, n: number): Promise<number> {
+  if (!USE_REAL_REDIS) return memory.incrby(key, n);
+  try { return await getRedis().incrby(key, n); } catch { return memory.incrby(key, n); }
+}
 
 // ── Public API ──────────────────────────────────────────────────────
 
-export async function getCurrentSlide(): Promise<number> {
-  if (!USE_REAL_REDIS) return memory.get(KEYS.currentSlide);
-  try {
-    const val = await getRedis().get<number>(KEYS.currentSlide);
-    return val ?? 0;
-  } catch {
-    return memory.get(KEYS.currentSlide);
-  }
+export const getCurrentSlide = () => rGet(K.slide);
+export const setCurrentSlide = (v: number) => rSet(K.slide, v);
+export const incrementActiveUsers = () => rIncr(K.users);
+export const getActiveUsers = () => rGet(K.users);
+export const incrementShipTaps = (n = 1) => rIncrBy(K.shipTaps, n);
+export const getShipTaps = () => rGet(K.shipTaps);
+export const incrementCityTaps = (n = 1) => rIncrBy(K.cityTaps, n);
+export const getCityTaps = () => rGet(K.cityTaps);
+
+export async function voteBeard(yes: boolean) {
+  if (yes) await rIncr(K.beardYes); else await rIncr(K.beardNo);
+  return { yes: await rGet(K.beardYes), no: await rGet(K.beardNo) };
+}
+export async function getBeardVotes() {
+  return { yes: await rGet(K.beardYes), no: await rGet(K.beardNo) };
 }
 
-export async function setCurrentSlide(slide: number): Promise<void> {
-  if (!USE_REAL_REDIS) { memory.set(KEYS.currentSlide, slide); return; }
-  try {
-    await getRedis().set(KEYS.currentSlide, slide);
-  } catch {
-    memory.set(KEYS.currentSlide, slide);
-  }
+export async function submitSenate(value: number) {
+  await rIncrBy(K.senateSum, value);
+  await rIncr(K.senateCount);
+  const [sum, cnt] = await Promise.all([rGet(K.senateSum), rGet(K.senateCount)]);
+  return { average: cnt > 0 ? Math.round(sum / cnt) : 50, count: cnt };
+}
+export async function getSenate() {
+  const [sum, cnt] = await Promise.all([rGet(K.senateSum), rGet(K.senateCount)]);
+  return { average: cnt > 0 ? Math.round(sum / cnt) : 50, count: cnt };
 }
 
-export async function incrementActiveUsers(): Promise<number> {
-  if (!USE_REAL_REDIS) return memory.incr(KEYS.activeUsers);
-  try {
-    return await getRedis().incr(KEYS.activeUsers);
-  } catch {
-    return memory.incr(KEYS.activeUsers);
-  }
+export async function submitQuiz(option: number) {
+  const keys = [K.quizA, K.quizB, K.quizC, K.quizD];
+  if (option >= 0 && option < 4) await rIncr(keys[option]);
+  return getQuizResults();
+}
+export async function getQuizResults() {
+  const [a, b, c, d] = await Promise.all([rGet(K.quizA), rGet(K.quizB), rGet(K.quizC), rGet(K.quizD)]);
+  return { options: [a, b, c, d], total: a + b + c + d };
 }
 
-export async function getActiveUsers(): Promise<number> {
-  if (!USE_REAL_REDIS) return memory.get(KEYS.activeUsers);
-  try {
-    const val = await getRedis().get<number>(KEYS.activeUsers);
-    return val ?? 0;
-  } catch {
-    return memory.get(KEYS.activeUsers);
-  }
+export async function submitIndustry(option: number) {
+  const keys = [K.indA, K.indB, K.indC, K.indD];
+  if (option >= 0 && option < 4) await rIncr(keys[option]);
+  return getIndustryResults();
 }
-
-export async function incrementShipTaps(amount = 1): Promise<number> {
-  if (!USE_REAL_REDIS) return memory.incrby(KEYS.shipTaps, amount);
-  try {
-    return await getRedis().incrby(KEYS.shipTaps, amount);
-  } catch {
-    return memory.incrby(KEYS.shipTaps, amount);
-  }
-}
-
-export async function getShipTaps(): Promise<number> {
-  if (!USE_REAL_REDIS) return memory.get(KEYS.shipTaps);
-  try {
-    const val = await getRedis().get<number>(KEYS.shipTaps);
-    return val ?? 0;
-  } catch {
-    return memory.get(KEYS.shipTaps);
-  }
-}
-
-export async function voteBeard(yes: boolean): Promise<{ yes: number; no: number }> {
-  if (!USE_REAL_REDIS) {
-    if (yes) memory.incr(KEYS.beardVoteYes); else memory.incr(KEYS.beardVoteNo);
-    return { yes: memory.get(KEYS.beardVoteYes), no: memory.get(KEYS.beardVoteNo) };
-  }
-  try {
-    const r = getRedis();
-    if (yes) await r.incr(KEYS.beardVoteYes); else await r.incr(KEYS.beardVoteNo);
-    const [y, n] = await Promise.all([
-      r.get<number>(KEYS.beardVoteYes),
-      r.get<number>(KEYS.beardVoteNo),
-    ]);
-    return { yes: y ?? 0, no: n ?? 0 };
-  } catch {
-    if (yes) memory.incr(KEYS.beardVoteYes); else memory.incr(KEYS.beardVoteNo);
-    return { yes: memory.get(KEYS.beardVoteYes), no: memory.get(KEYS.beardVoteNo) };
-  }
-}
-
-export async function getBeardVotes(): Promise<{ yes: number; no: number }> {
-  if (!USE_REAL_REDIS) {
-    return { yes: memory.get(KEYS.beardVoteYes), no: memory.get(KEYS.beardVoteNo) };
-  }
-  try {
-    const r = getRedis();
-    const [y, n] = await Promise.all([
-      r.get<number>(KEYS.beardVoteYes),
-      r.get<number>(KEYS.beardVoteNo),
-    ]);
-    return { yes: y ?? 0, no: n ?? 0 };
-  } catch {
-    return { yes: memory.get(KEYS.beardVoteYes), no: memory.get(KEYS.beardVoteNo) };
-  }
+export async function getIndustryResults() {
+  const [a, b, c, d] = await Promise.all([rGet(K.indA), rGet(K.indB), rGet(K.indC), rGet(K.indD)]);
+  return { options: [a, b, c, d], total: a + b + c + d };
 }
 
 export async function getFullState() {
-  const [currentSlide, activeUsers, shipTaps, beardVotes] = await Promise.all([
-    getCurrentSlide(),
-    getActiveUsers(),
-    getShipTaps(),
-    getBeardVotes(),
-  ]);
-  return { currentSlide, activeUsers, shipTaps, beardVotes };
+  const [currentSlide, activeUsers, shipTaps, beardVotes, senate, quiz, cityTaps, industry] =
+    await Promise.all([
+      getCurrentSlide(), getActiveUsers(), getShipTaps(), getBeardVotes(),
+      getSenate(), getQuizResults(), getCityTaps(), getIndustryResults(),
+    ]);
+  return { currentSlide, activeUsers, shipTaps, beardVotes, senate, quiz, cityTaps, industry };
 }
 
 export async function resetSession(): Promise<void> {
-  if (!USE_REAL_REDIS) {
-    memory.set(KEYS.currentSlide, 0);
-    memory.set(KEYS.activeUsers, 0);
-    memory.set(KEYS.shipTaps, 0);
-    memory.set(KEYS.beardVoteYes, 0);
-    memory.set(KEYS.beardVoteNo, 0);
-    return;
-  }
-  try {
-    const r = getRedis();
-    await Promise.all([
-      r.set(KEYS.currentSlide, 0),
-      r.set(KEYS.activeUsers, 0),
-      r.set(KEYS.shipTaps, 0),
-      r.set(KEYS.beardVoteYes, 0),
-      r.set(KEYS.beardVoteNo, 0),
-    ]);
-  } catch {
-    memory.set(KEYS.currentSlide, 0);
-    memory.set(KEYS.activeUsers, 0);
-    memory.set(KEYS.shipTaps, 0);
-    memory.set(KEYS.beardVoteYes, 0);
-    memory.set(KEYS.beardVoteNo, 0);
-  }
+  await Promise.all(ALL_KEYS.map((k) => rSet(k, 0)));
 }
