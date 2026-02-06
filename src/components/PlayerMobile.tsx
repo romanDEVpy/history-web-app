@@ -11,7 +11,7 @@ import BlockPuzzle from "./BlockPuzzle";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
-const IND_LABELS = ["Металлургия", "Текстиль", "Кораблестроение", "Стекло"];
+const IND_LABELS = ["Учреждение Сената", "Система коллегий", "Губернская реформа", "Табель о рангах"];
 const IND_COLORS = ["#ef4444", "#3b82f6", "#22c55e", "#a855f7"];
 
 export default function PlayerMobile() {
@@ -76,12 +76,12 @@ export default function PlayerMobile() {
           >
             {slide.type === "wait" && <WaitView />}
             {slide.type === "info" && <InfoView slide={slide} />}
-            {slide.type === "activity_ships" && <BlockPuzzle endpoint="/api/tap" title="Создание Флота" subtitle="Соберите линии, чтобы построить корабли!" themeColor="#3b82f6" total={state.shipTaps} goal={3} />}
+            {slide.type === "activity_ships" && <BlockPuzzle endpoint="/api/tap" title="Губернская реформа" subtitle="Соберите линии — постройте новую административную карту!" themeColor="#3b82f6" total={state.shipTaps} goal={3} />}
             {slide.type === "activity_beard" && <BeardActivity votes={state.beardVotes} />}
             {slide.type === "activity_senate" && <SenateActivity senate={state.senate} />}
             {slide.type === "quiz_alphabet" && <QuizActivity slide={slide} quiz={state.quiz} endpoint="/api/quiz" />}
             {slide.type === "info_calendar" && <CalendarView />}
-            {slide.type === "activity_city" && <BlockPuzzle endpoint="/api/city" title="Строительство Петербурга" subtitle="Соберите линии, чтобы возвести город!" themeColor="#22c55e" total={state.cityTaps} goal={3} />}
+            {slide.type === "activity_city" && <BlockPuzzle endpoint="/api/city" title="Генеральный регламент" subtitle="Соберите линии — выстройте систему госслужбы!" themeColor="#22c55e" total={state.cityTaps} goal={3} />}
             {slide.type === "activity_industry" && <IndustryActivity industry={state.industry} />}
             {slide.type === "info_ranks" && <InfoView slide={slide} />}
             {slide.type === "finale" && <FinaleView />}
@@ -102,7 +102,7 @@ function WaitView() {
         animate={{ scale: [1, 1.12, 1], opacity: [0.7, 1, 0.7], borderRadius: ["50%", "45% 55% 60% 40%", "50%"] }}
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
       />
-      <h2 className="mb-2 font-serif text-2xl text-white/80">Великое Преобразование</h2>
+      <h2 className="mb-2 font-serif text-2xl text-white/80">Реформа управления</h2>
       <p className="font-mono text-sm text-white/30">Ожидание начала...</p>
       <motion.div className="mt-6 flex gap-1" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.5, repeat: Infinity }}>
         {[0, 1, 2].map((i) => (
@@ -152,19 +152,19 @@ function BeardActivity({ votes }: { votes: { yes: number; no: number } }) {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-2">
-      <h2 className="font-serif text-xl text-white/80">Налог на бороды</h2>
-      <p className="text-center text-sm text-white/40">Сбрить бороду — или заплатить налог?</p>
+      <h2 className="font-serif text-xl text-white/80">Принцип назначения</h2>
+      <p className="text-center text-sm text-white/40">По заслугам — или по знатности рода?</p>
       {!voted ? (
         <div className="flex w-full max-w-xs gap-4">
-          <GooeyButton variant="gold" className="flex-1 py-6 text-lg" onClick={() => castVote(true)}>✂️ Сбрить</GooeyButton>
-          <GooeyButton variant="silver" className="flex-1 py-6 text-lg" onClick={() => castVote(false)}>🪙 Заплатить</GooeyButton>
+          <GooeyButton variant="gold" className="flex-1 py-6 text-lg" onClick={() => castVote(true)}>⚖️ По заслугам</GooeyButton>
+          <GooeyButton variant="silver" className="flex-1 py-6 text-lg" onClick={() => castVote(false)}>👑 По знатности</GooeyButton>
         </div>
       ) : (
         <GlassCard className="w-full max-w-xs p-6 text-center" glow={0.4}>
           <motion.p initial={{ scale: 0 }} animate={{ scale: 1 }} className="mb-4 font-mono text-sm text-amber-300/80">Ваш голос учтён!</motion.p>
           <div className="flex justify-around">
-            <div><p className="font-mono text-xs text-white/30">Сбрить</p><p className="font-serif text-2xl text-green-400">{votes.yes}</p></div>
-            <div><p className="font-mono text-xs text-white/30">Налог</p><p className="font-serif text-2xl text-red-400">{votes.no}</p></div>
+            <div><p className="font-mono text-xs text-white/30">Заслуги</p><p className="font-serif text-2xl text-green-400">{votes.yes}</p></div>
+            <div><p className="font-mono text-xs text-white/30">Знатность</p><p className="font-serif text-2xl text-red-400">{votes.no}</p></div>
           </div>
           {total > 0 && (
             <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/5 border border-white/10">
@@ -271,12 +271,12 @@ function CalendarView() {
     <div className="flex flex-1 flex-col items-center justify-center text-center gap-6 px-2">
       <GlassCard className="p-6 w-full max-w-xs" glow={0.4}>
         <motion.div className="space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <motion.p className="font-serif text-5xl text-red-400/60 line-through" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 3, repeat: Infinity }}>7208</motion.p>
+          <motion.p className="font-serif text-4xl text-red-400/60 line-through" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 3, repeat: Infinity }}>Патриарх</motion.p>
           <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="text-2xl opacity-40">⟳</motion.div>
-          <motion.p className="font-serif text-5xl text-amber-300" animate={{ scale: [1, 1.08, 1] }} transition={{ duration: 2, repeat: Infinity }}>1700</motion.p>
-          <p className="font-mono text-xs text-white/30">1 января — новый Новый год!</p>
+          <motion.p className="font-serif text-4xl text-amber-300" animate={{ scale: [1, 1.08, 1] }} transition={{ duration: 2, repeat: Infinity }}>Синод</motion.p>
+          <p className="font-mono text-xs text-white/30">Церковь подчинена государству</p>
           <div className="flex justify-center gap-2 mt-2">
-            {["🎄", "🎆", "❄️", "🕐"].map((e, i) => (
+            {["⛪", "📜", "🏛️", "⚖️"].map((e, i) => (
               <motion.span key={i} animate={{ y: [0, -6, 0] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} className="text-xl">{e}</motion.span>
             ))}
           </div>
@@ -297,7 +297,7 @@ function IndustryActivity({ industry }: { industry: { options: number[]; total: 
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-2">
-      <h2 className="font-serif text-xl text-white/80">Какую отрасль развивать?</h2>
+      <h2 className="font-serif text-xl text-white/80">Какая реформа важнее?</h2>
       <div className="w-full max-w-sm space-y-3">
         {IND_LABELS.map((label, i) => {
           const count = industry.options[i] ?? 0;
@@ -332,13 +332,13 @@ function FinaleView() {
     <div className="flex flex-1 flex-col items-center justify-center text-center gap-6 px-4">
       <MorphingSVG variant="crown" className="h-24 w-24" color="rgba(245,158,11,0.35)" />
       <motion.h2 className="font-serif text-2xl font-bold text-white/90" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-        Итоги Преобразования
+        Итоги реформы управления
       </motion.h2>
       <motion.p className="text-amber-300/70 font-serif text-lg" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 3, repeat: Infinity }}>
-        Россия — Империя!
+        От приказов — к регулярному государству
       </motion.p>
       <div className="grid grid-cols-3 gap-4 w-full max-w-xs">
-        {[{ v: "48", l: "кораблей", c: "text-blue-400" }, { v: "200", l: "мануфактур", c: "text-green-400" }, { v: "14", l: "рангов", c: "text-amber-400" }].map((item, i) => (
+        {[{ v: "12", l: "коллегий", c: "text-blue-400" }, { v: "8", l: "губерний", c: "text-green-400" }, { v: "14", l: "рангов", c: "text-amber-400" }].map((item, i) => (
           <motion.div key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3 + i * 0.15, type: "spring" }}>
             <GlassCard className="p-3 text-center">
               <p className={`font-serif text-2xl ${item.c}`}>{item.v}</p>

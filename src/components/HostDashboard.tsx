@@ -23,7 +23,7 @@ const RANKS_DATA = [
   { rank: "XIV", title: "Коллежский регистратор / Прапорщик", color: "text-slate-500" },
 ];
 
-const IND_LABELS = ["Металлургия", "Текстиль", "Кораблестроение", "Стекло"];
+const IND_LABELS = ["Учреждение Сената", "Система коллегий", "Губернская реформа", "Табель о рангах"];
 const IND_COLORS = ["#ef4444", "#3b82f6", "#22c55e", "#a855f7"];
 
 export default function HostDashboard() {
@@ -134,11 +134,11 @@ export default function HostDashboard() {
             <motion.div animate={{ rotate: [0, 1, -1, 0] }} transition={{ duration: 20, repeat: Infinity }}>
               <LiquidBlob progress={overallProgress} voteRatio={voteRatio} size={0.9} />
             </motion.div>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-white/20">Состояние Империи</p>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-white/20">Состояние реформы</p>
             <GlassCard className="w-full p-4 space-y-3">
-              <StatRow label="Пазл (флот)" value={state.shipTaps} color="#3b82f6" />
-              <StatRow label="Пазл (город)" value={state.cityTaps} color="#22c55e" />
-              <StatRow label="Голоса (борода)" value={totalVotes} color="#f59e0b" />
+              <StatRow label="Пазл (губернии)" value={state.shipTaps} color="#3b82f6" />
+              <StatRow label="Пазл (регламент)" value={state.cityTaps} color="#22c55e" />
+              <StatRow label="Голоса (назначение)" value={totalVotes} color="#f59e0b" />
               <StatRow label="Ответы (квиз)" value={state.quiz.total} color="#a855f7" />
             </GlassCard>
           </div>
@@ -163,7 +163,7 @@ function HostSlideContent({ slide, state, totalVotes }: {
   if (slide.type === "activity_ships") return (
     <div className="space-y-4">
       <div className="flex items-end justify-between">
-        <p className="font-mono text-sm text-white/40">Головоломка: Верфь</p>
+        <p className="font-mono text-sm text-white/40">Головоломка: Губернии</p>
         <p className="font-mono text-2xl text-amber-300"><AnimatedCounter value={state.shipTaps} className="text-amber-300" /> <span className="text-sm text-white/30">решили</span></p>
       </div>
       <div className="flex items-center gap-4 py-4">
@@ -171,7 +171,7 @@ function HostSlideContent({ slide, state, totalVotes }: {
         <div className="flex-1">
           <p className="font-mono text-xs text-white/30 mb-2">Участники собирают блоки</p>
           <div className="flex gap-1 flex-wrap">{Array.from({ length: Math.min(state.shipTaps, 20) }).map((_, i) => (
-            <motion.span key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: i * 0.05, type: "spring" }} className="text-lg">⛵</motion.span>
+            <motion.span key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: i * 0.05, type: "spring" }} className="text-lg">🏛️</motion.span>
           ))}</div>
         </div>
       </div>
@@ -181,8 +181,8 @@ function HostSlideContent({ slide, state, totalVotes }: {
   if (slide.type === "activity_beard") return (
     <div className="space-y-4">
       <div className="flex gap-4">
-        <GlassCard className="flex-1 p-4 text-center"><p className="font-mono text-xs text-white/40 mb-1">Сбрить</p><p className="font-serif text-3xl text-green-400"><AnimatedCounter value={state.beardVotes.yes} className="text-green-400" /></p></GlassCard>
-        <GlassCard className="flex-1 p-4 text-center"><p className="font-mono text-xs text-white/40 mb-1">Заплатить</p><p className="font-serif text-3xl text-red-400"><AnimatedCounter value={state.beardVotes.no} className="text-red-400" /></p></GlassCard>
+        <GlassCard className="flex-1 p-4 text-center"><p className="font-mono text-xs text-white/40 mb-1">По заслугам</p><p className="font-serif text-3xl text-green-400"><AnimatedCounter value={state.beardVotes.yes} className="text-green-400" /></p></GlassCard>
+        <GlassCard className="flex-1 p-4 text-center"><p className="font-mono text-xs text-white/40 mb-1">По знатности</p><p className="font-serif text-3xl text-red-400"><AnimatedCounter value={state.beardVotes.no} className="text-red-400" /></p></GlassCard>
       </div>
       {totalVotes > 0 && (
         <div className="relative h-5 overflow-hidden rounded-full bg-white/5 border border-white/10">
@@ -228,16 +228,16 @@ function HostSlideContent({ slide, state, totalVotes }: {
 
   if (slide.type === "info_calendar") return (
     <div className="flex items-center justify-center gap-8 py-4">
-      <GlassCard className="p-4 text-center"><motion.p className="font-serif text-4xl text-red-400/80" animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 3, repeat: Infinity }}>7208</motion.p><p className="font-mono text-[10px] text-white/30 mt-1">от сотворения мира</p></GlassCard>
+      <GlassCard className="p-4 text-center"><motion.p className="font-serif text-3xl text-red-400/80 line-through" animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 3, repeat: Infinity }}>Патриарх</motion.p><p className="font-mono text-[10px] text-white/30 mt-1">единоличная власть</p></GlassCard>
       <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 3, repeat: Infinity, ease: "linear" }} className="text-3xl opacity-40">⟳</motion.div>
-      <GlassCard className="p-4 text-center" glow={0.5}><motion.p className="font-serif text-4xl text-amber-300" animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 2, repeat: Infinity }}>1700</motion.p><p className="font-mono text-[10px] text-white/30 mt-1">от Рождества Христова</p></GlassCard>
+      <GlassCard className="p-4 text-center" glow={0.5}><motion.p className="font-serif text-3xl text-amber-300" animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 2, repeat: Infinity }}>Синод</motion.p><p className="font-mono text-[10px] text-white/30 mt-1">государственный контроль</p></GlassCard>
     </div>
   );
 
   if (slide.type === "activity_city") return (
     <div className="space-y-4">
       <div className="flex items-end justify-between">
-        <p className="font-mono text-sm text-white/40">Головоломка: Петербург</p>
+        <p className="font-mono text-sm text-white/40">Головоломка: Регламент</p>
         <p className="font-mono text-2xl text-green-400"><AnimatedCounter value={state.cityTaps} className="text-green-400" /> <span className="text-sm text-white/30">решили</span></p>
       </div>
       <div className="flex items-center gap-4 py-4">
@@ -285,10 +285,10 @@ function HostSlideContent({ slide, state, totalVotes }: {
   if (slide.type === "finale") return (
     <div className="flex flex-col items-center gap-4 py-4">
       <MorphingSVG variant="crown" className="h-28 w-28" color="rgba(245,158,11,0.3)" />
-      <motion.p className="text-center font-serif text-xl text-amber-300/80" animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 3, repeat: Infinity }}>Россия провозглашена Империей</motion.p>
+      <motion.p className="text-center font-serif text-xl text-amber-300/80" animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 3, repeat: Infinity }}>От приказов — к регулярному государству</motion.p>
       <div className="flex gap-6 text-center">
-        <div><p className="font-serif text-2xl text-blue-400"><AnimatedCounter value={48} className="text-blue-400" /></p><p className="font-mono text-[10px] text-white/30">кораблей</p></div>
-        <div><p className="font-serif text-2xl text-green-400"><AnimatedCounter value={200} className="text-green-400" /></p><p className="font-mono text-[10px] text-white/30">мануфактур</p></div>
+        <div><p className="font-serif text-2xl text-blue-400"><AnimatedCounter value={12} className="text-blue-400" /></p><p className="font-mono text-[10px] text-white/30">коллегий</p></div>
+        <div><p className="font-serif text-2xl text-green-400"><AnimatedCounter value={8} className="text-green-400" /></p><p className="font-mono text-[10px] text-white/30">губерний</p></div>
         <div><p className="font-serif text-2xl text-amber-400"><AnimatedCounter value={14} className="text-amber-400" /></p><p className="font-mono text-[10px] text-white/30">рангов</p></div>
       </div>
     </div>
