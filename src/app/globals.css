@@ -90,3 +90,12 @@ body {
 .text-glow-blue {
   text-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.15);
 }
+
+/* ── Puzzle flash animation ─────────────────────────────── */
+@keyframes puzzle-flash-kf {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; background: rgba(255, 255, 255, 0.6); }
+}
+.puzzle-flash {
+  animation: puzzle-flash-kf 0.2s ease-in-out 2;
+}

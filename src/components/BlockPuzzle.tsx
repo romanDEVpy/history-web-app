@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, type PanInfo } from "framer-motion";
 import { useState, useCallback, useRef } from "react";
 import GlassCard from "./GlassCard";
 
@@ -63,6 +63,10 @@ interface Props {
 
 export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, total, goal = 3 }: Props) {
   const rngRef = useRef(makeRng(Math.floor(Math.random() * 0x7fffffff)));
+  const gridRef = useRef<HTMLDivElement>(null);
+  const completedRef = useRef(false);
+  const rafRef = useRef(0);
+  const isDraggingRef = useRef(false);
 
   const [grid, setGrid] = useState<number[][]>(() =>
     Array.from({ length: GRID }, () => Array(GRID).fill(0))
@@ -72,43 +76,62 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
   const [cleared, setCleared] = useState(0);
   const [colorSeq, setColorSeq] = useState(1);
   const [completed, setCompleted] = useState(false);
-  const [flashRows, setFlashRows] = useState<Set<number>>(new Set());
-  const [flashCols, setFlashCols] = useState<Set<number>>(new Set());
-  const completedRef = useRef(false);
+  const [flashCells, setFlashCells] = useState<Set<string>>(new Set());
+  const [previewCells, setPreviewCells] = useState<Set<string>>(new Set());
+  const [previewValid, setPreviewValid] = useState(false);
 
-  /* check & clear filled lines */
+  /* ── Helpers ──────────────────────────────────────────────── */
+
+  const canPlaceAt = useCallback((piece: number[][], row: number, col: number, g: number[][] = grid) => {
+    return piece.every(([dr, dc]) => {
+      const r = row + dr, c = col + dc;
+      return r >= 0 && r < GRID && c >= 0 && c < GRID && g[r][c] === 0;
+    });
+  }, [grid]);
+
+  const getGridCell = useCallback((px: number, py: number, offsetUp = 0): { row: number; col: number } | null => {
+    const el = gridRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const step = (rect.width + 2) / GRID;
+    const col = Math.floor((px - rect.left) / step);
+    const row = Math.floor((py - rect.top - offsetUp) / step);
+    if (row < 0 || col < 0 || row >= GRID || col >= GRID) return null;
+    return { row, col };
+  }, []);
+
   const clearLines = useCallback((g: number[][]): { grid: number[][]; count: number } => {
     const next = g.map(r => [...r]);
     let count = 0;
-    const rows = new Set<number>();
-    const cols = new Set<number>();
+    const flash = new Set<string>();
 
-    for (let r = 0; r < GRID; r++) if (next[r].every(c => c > 0)) rows.add(r);
-    for (let c = 0; c < GRID; c++) if (next.every(row => row[c] > 0)) cols.add(c);
-
-    rows.forEach(r => { next[r] = Array(GRID).fill(0); count++; });
-    cols.forEach(c => { for (let r = 0; r < GRID; r++) next[r][c] = 0; count++; });
-
-    if (count > 0) {
-      setFlashRows(rows);
-      setFlashCols(cols);
-      setTimeout(() => { setFlashRows(new Set()); setFlashCols(new Set()); }, 400);
+    for (let r = 0; r < GRID; r++) {
+      if (next[r].every(c => c > 0)) {
+        for (let c = 0; c < GRID; c++) flash.add(`${r}-${c}`);
+        next[r] = Array(GRID).fill(0);
+        count++;
+      }
+    }
+    for (let c = 0; c < GRID; c++) {
+      if (next.every(row => row[c] > 0)) {
+        for (let r = 0; r < GRID; r++) flash.add(`${r}-${c}`);
+        for (let r = 0; r < GRID; r++) next[r][c] = 0;
+        count++;
+      }
     }
 
+    if (flash.size > 0) {
+      setFlashCells(flash);
+      setTimeout(() => setFlashCells(new Set()), 400);
+    }
     return { grid: next, count };
   }, []);
 
-  /* place piece on grid */
-  const place = useCallback((row: number, col: number) => {
-    if (selected === null || completed) return;
-    const piece = pieces[selected];
-    if (!piece) return;
-
-    const ok = piece.every(([dr, dc]) => {
-      const r = row + dr, c = col + dc;
-      return r >= 0 && r < GRID && c >= 0 && c < GRID && grid[r][c] === 0;
-    });
-    if (!ok) return;
+  /* place piece on grid at given position */
+  const doPlace = useCallback((row: number, col: number, pieceIdx: number) => {
+    if (completed) return false;
+    const piece = pieces[pieceIdx];
+    if (!piece || !canPlaceAt(piece, row, col)) return false;
 
     const ci = ((colorSeq - 1) % COLORS.length) + 1;
     const next = grid.map(r => [...r]);
@@ -122,8 +145,7 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
     setColorSeq(colorSeq + 1);
 
     const updated = [...pieces];
-    updated[selected] = null;
-    setSelected(null);
+    updated[pieceIdx] = null;
 
     if (updated.every(p => p === null)) {
       setPieces(makeBatch(rngRef.current));
@@ -140,24 +162,93 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
         body: JSON.stringify({ amount: 1 }),
       });
     }
-  }, [selected, pieces, grid, colorSeq, cleared, goal, completed, clearLines, endpoint]);
+    return true;
+  }, [pieces, grid, colorSeq, cleared, goal, completed, canPlaceAt, clearLines, endpoint]);
 
-  /* get new pieces if stuck */
+  /* ── Drag handlers ─────────────────────────────────────────── */
+
+  const handleDragStart = useCallback(() => {
+    isDraggingRef.current = true;
+  }, []);
+
+  const handleDrag = useCallback((pieceIdx: number, _: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const el = gridRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const cellH = (rect.height + 2) / GRID;
+      const pos = getGridCell(info.point.x, info.point.y, cellH * 2);
+      const piece = pieces[pieceIdx];
+
+      if (!pos || !piece) {
+        setPreviewCells(new Set());
+        setPreviewValid(false);
+        return;
+      }
+
+      const valid = canPlaceAt(piece, pos.row, pos.col);
+      const cells = new Set<string>();
+      piece.forEach(([dr, dc]) => {
+        const r = pos.row + dr, c = pos.col + dc;
+        if (r >= 0 && r < GRID && c >= 0 && c < GRID) cells.add(`${r}-${c}`);
+      });
+      setPreviewCells(cells);
+      setPreviewValid(valid);
+    });
+  }, [pieces, getGridCell, canPlaceAt]);
+
+  const handleDragEnd = useCallback((pieceIdx: number, _: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    cancelAnimationFrame(rafRef.current);
+    setTimeout(() => { isDraggingRef.current = false; }, 50);
+    setPreviewCells(new Set());
+    setPreviewValid(false);
+
+    const el = gridRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const cellH = (rect.height + 2) / GRID;
+    const pos = getGridCell(info.point.x, info.point.y, cellH * 2);
+    const piece = pieces[pieceIdx];
+
+    if (pos && piece && canPlaceAt(piece, pos.row, pos.col)) {
+      doPlace(pos.row, pos.col, pieceIdx);
+    }
+  }, [pieces, getGridCell, canPlaceAt, doPlace]);
+
+  /* ── Tap fallback handlers ─────────────────────────────────── */
+
+  const handlePieceTap = useCallback((idx: number) => {
+    if (isDraggingRef.current) return;
+    setSelected(prev => prev === idx ? null : idx);
+  }, []);
+
+  const handleGridTap = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (selected === null || isDraggingRef.current) return;
+    const pos = getGridCell(e.clientX, e.clientY);
+    if (pos && doPlace(pos.row, pos.col, selected)) {
+      setSelected(null);
+    }
+  }, [selected, getGridCell, doPlace]);
+
+  /* ── Skip / Reset ──────────────────────────────────────────── */
+
   const skipPieces = useCallback(() => {
     setPieces(makeBatch(rngRef.current));
     setSelected(null);
+    setPreviewCells(new Set());
   }, []);
 
-  /* reset whole board */
   const resetBoard = useCallback(() => {
     setGrid(Array.from({ length: GRID }, () => Array(GRID).fill(0)));
     setPieces(makeBatch(rngRef.current));
     setSelected(null);
     setCleared(0);
     setColorSeq(1);
+    setPreviewCells(new Set());
   }, []);
 
-  /* ── Completed view ──────────────────────────────────────────── */
+  /* ── Render: completed ─────────────────────────────────────── */
   if (completed) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
@@ -173,7 +264,7 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
     );
   }
 
-  /* ── Main view ───────────────────────────────────────────────── */
+  /* ── Render: main ──────────────────────────────────────────── */
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 px-1">
       <h2 className="font-serif text-lg text-white/80">{title}</h2>
@@ -189,25 +280,48 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
       </div>
 
       {/* Grid */}
-      <div className="rounded-lg border border-white/10 bg-black/20 p-1 backdrop-blur-sm"
-        style={{ width: "min(88vw, 340px)" }}>
+      <div
+        ref={gridRef}
+        onClick={handleGridTap}
+        className="rounded-lg border border-white/10 bg-black/20 p-1 backdrop-blur-sm"
+        style={{ width: "min(88vw, 340px)" }}
+      >
         <div className="grid" style={{ gridTemplateColumns: `repeat(${GRID}, 1fr)`, gap: "2px" }}>
           {grid.map((row, r) => row.map((cell, c) => {
-            const isFlash = flashRows.has(r) || flashCols.has(c);
-            const colorIndex = cell > 0 ? (cell - 1) % COLORS.length : -1;
-            const bg = isFlash ? "rgba(255,255,255,0.35)"
-              : cell > 0 ? `${COLORS[colorIndex]}44` : "rgba(255,255,255,0.03)";
-            const border = isFlash ? "rgba(255,255,255,0.6)"
-              : cell > 0 ? `${COLORS[colorIndex]}88` : "rgba(255,255,255,0.06)";
+            const key = `${r}-${c}`;
+            const isFlash = flashCells.has(key);
+            const isPreview = previewCells.has(key);
+            const ci = cell > 0 ? (cell - 1) % COLORS.length : -1;
+
+            let bg: string, bc: string, shadow = "none";
+
+            if (isFlash) {
+              bg = "rgba(255,255,255,0.4)";
+              bc = "rgba(255,255,255,0.7)";
+              shadow = "0 0 12px rgba(255,255,255,0.4)";
+            } else if (isPreview && cell === 0) {
+              bg = previewValid ? `${themeColor}33` : "rgba(239,68,68,0.15)";
+              bc = previewValid ? `${themeColor}88` : "rgba(239,68,68,0.4)";
+              shadow = previewValid ? `0 0 8px ${themeColor}33` : "none";
+            } else if (cell > 0) {
+              bg = `${COLORS[ci]}44`;
+              bc = `${COLORS[ci]}88`;
+              shadow = `inset 0 0 6px ${COLORS[ci]}22`;
+            } else {
+              bg = "rgba(255,255,255,0.03)";
+              bc = "rgba(255,255,255,0.06)";
+            }
 
             return (
-              <motion.button key={`${r}-${c}`} onClick={() => place(r, c)}
-                className="aspect-square rounded-[3px] border transition-colors duration-150"
-                style={{ background: bg, borderColor: border,
-                  boxShadow: isFlash ? "0 0 10px rgba(255,255,255,0.3)" : cell > 0 ? `inset 0 0 6px ${COLORS[colorIndex]}22` : "none" }}
-                whileTap={{ scale: 0.88 }}
-                animate={isFlash ? { opacity: [1, 0.5, 1] } : {}}
-                transition={isFlash ? { duration: 0.3, repeat: 1 } : {}}
+              <div
+                key={key}
+                className={`aspect-square rounded-[3px] border ${isFlash ? "puzzle-flash" : ""}`}
+                style={{
+                  background: bg,
+                  borderColor: bc,
+                  boxShadow: shadow,
+                  transition: "background 150ms, border-color 150ms, box-shadow 150ms",
+                }}
               />
             );
           }))}
@@ -215,31 +329,56 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
       </div>
 
       {/* Pieces tray */}
-      <div className="flex items-end justify-center gap-3 min-h-[72px]">
+      <div className="flex items-end justify-center gap-3 min-h-[80px] relative" style={{ zIndex: 10 }}>
         {pieces.map((piece, idx) => {
-          if (!piece) return <div key={idx} className="w-14 h-14 rounded-lg border border-dashed border-white/5" />;
+          if (!piece) return (
+            <div key={idx} className="w-16 h-16 rounded-lg border border-dashed border-white/5 opacity-30" />
+          );
           const isSel = selected === idx;
           const maxR = Math.max(...piece.map(([r]) => r)) + 1;
           const maxC = Math.max(...piece.map(([, c]) => c)) + 1;
           const pc = COLORS[((colorSeq + idx - 1) % COLORS.length)];
+
           return (
-            <motion.button key={idx} onClick={() => setSelected(isSel ? null : idx)}
-              className={`rounded-lg border p-1.5 transition-all ${isSel ? "border-amber-400/60 bg-amber-400/10" : "border-white/10 bg-white/5"}`}
-              whileTap={{ scale: 0.93 }} animate={isSel ? { y: -5, scale: 1.08 } : { y: 0, scale: 1 }}>
-              <div className="grid gap-[2px]"
-                style={{ gridTemplateColumns: `repeat(${maxC}, 14px)`, gridTemplateRows: `repeat(${maxR}, 14px)` }}>
+            <motion.div
+              key={`p-${idx}-${colorSeq}`}
+              drag
+              dragSnapToOrigin
+              dragMomentum={false}
+              dragElastic={0}
+              onDragStart={handleDragStart}
+              onDrag={(e, info) => handleDrag(idx, e, info)}
+              onDragEnd={(e, info) => handleDragEnd(idx, e, info)}
+              onClick={() => handlePieceTap(idx)}
+              whileDrag={{
+                scale: 1.2,
+                zIndex: 100,
+                boxShadow: "0 16px 40px rgba(0,0,0,0.5), 0 0 20px rgba(245,158,11,0.15)",
+              }}
+              animate={isSel ? { y: -6, scale: 1.08 } : { y: 0, scale: 1 }}
+              className={`rounded-lg border p-2 cursor-grab active:cursor-grabbing touch-none select-none ${
+                isSel ? "border-amber-400/60 bg-amber-400/10" : "border-white/10 bg-white/5"
+              }`}
+              style={{ zIndex: isSel ? 5 : 1 }}
+            >
+              <div
+                className="grid gap-[2px] pointer-events-none"
+                style={{ gridTemplateColumns: `repeat(${maxC}, 16px)`, gridTemplateRows: `repeat(${maxR}, 16px)` }}
+              >
                 {Array.from({ length: maxR * maxC }).map((_, i) => {
                   const r = Math.floor(i / maxC), c = i % maxC;
                   const on = piece.some(([pr, pcc]) => pr === r && pcc === c);
-                  return <div key={i} className="rounded-[2px]" style={{
-                    width: 14, height: 14,
-                    background: on ? `${pc}77` : "transparent",
-                    border: on ? `1px solid ${pc}bb` : "none",
-                    boxShadow: on ? `inset 0 0 4px ${pc}33` : "none",
-                  }} />;
+                  return (
+                    <div key={i} className="rounded-[2px]" style={{
+                      width: 16, height: 16,
+                      background: on ? `${pc}77` : "transparent",
+                      border: on ? `1px solid ${pc}bb` : "none",
+                      boxShadow: on ? `inset 0 0 4px ${pc}33` : "none",
+                    }} />
+                  );
                 })}
               </div>
-            </motion.button>
+            </motion.div>
           );
         })}
       </div>
@@ -253,7 +392,7 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
           Очистить поле
         </button>
       </div>
-      <p className="font-mono text-[9px] text-white/15">Выберите блок → нажмите на поле • Соберите линию целиком</p>
+      <p className="font-mono text-[9px] text-white/15">Перетащите блок на поле • Соберите линию целиком</p>
     </div>
   );
 }
