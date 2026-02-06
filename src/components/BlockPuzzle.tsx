@@ -89,13 +89,16 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
     });
   }, [grid]);
 
-  const getGridCell = useCallback((px: number, py: number, offsetUp = 0): { row: number; col: number } | null => {
+  const getGridCell = useCallback((px: number, py: number): { row: number; col: number } | null => {
     const el = gridRef.current;
     if (!el) return null;
     const rect = el.getBoundingClientRect();
-    const step = (rect.width + 2) / GRID;
-    const col = Math.floor((px - rect.left) / step);
-    const row = Math.floor((py - rect.top - offsetUp) / step);
+    // border (1px) + padding p-1 (4px) = 5px inset
+    const pad = 5;
+    const stepX = (rect.width - pad * 2 + 2) / GRID;
+    const stepY = (rect.height - pad * 2 + 2) / GRID;
+    const col = Math.floor((px - rect.left - pad) / stepX);
+    const row = Math.floor((py - rect.top - pad) / stepY);
     if (row < 0 || col < 0 || row >= GRID || col >= GRID) return null;
     return { row, col };
   }, []);
@@ -174,23 +177,26 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
   const handleDrag = useCallback((pieceIdx: number, _: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
-      const el = gridRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const cellH = (rect.height + 2) / GRID;
-      const pos = getGridCell(info.point.x, info.point.y, cellH * 2);
       const piece = pieces[pieceIdx];
+      if (!piece) return;
+      const rawPos = getGridCell(info.point.x, info.point.y);
 
-      if (!pos || !piece) {
+      if (!rawPos) {
         setPreviewCells(new Set());
         setPreviewValid(false);
         return;
       }
 
-      const valid = canPlaceAt(piece, pos.row, pos.col);
+      // Center piece on pointer position
+      const maxR = Math.max(...piece.map(([r]) => r));
+      const maxC = Math.max(...piece.map(([, c]) => c));
+      const row = rawPos.row - Math.floor(maxR / 2);
+      const col = rawPos.col - Math.floor(maxC / 2);
+
+      const valid = canPlaceAt(piece, row, col);
       const cells = new Set<string>();
       piece.forEach(([dr, dc]) => {
-        const r = pos.row + dr, c = pos.col + dc;
+        const r = row + dr, c = col + dc;
         if (r >= 0 && r < GRID && c >= 0 && c < GRID) cells.add(`${r}-${c}`);
       });
       setPreviewCells(cells);
@@ -204,15 +210,19 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
     setPreviewCells(new Set());
     setPreviewValid(false);
 
-    const el = gridRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const cellH = (rect.height + 2) / GRID;
-    const pos = getGridCell(info.point.x, info.point.y, cellH * 2);
     const piece = pieces[pieceIdx];
+    if (!piece) return;
+    const rawPos = getGridCell(info.point.x, info.point.y);
+    if (!rawPos) return;
 
-    if (pos && piece && canPlaceAt(piece, pos.row, pos.col)) {
-      doPlace(pos.row, pos.col, pieceIdx);
+    // Center piece on pointer position
+    const maxR = Math.max(...piece.map(([r]) => r));
+    const maxC = Math.max(...piece.map(([, c]) => c));
+    const row = rawPos.row - Math.floor(maxR / 2);
+    const col = rawPos.col - Math.floor(maxC / 2);
+
+    if (canPlaceAt(piece, row, col)) {
+      doPlace(row, col, pieceIdx);
     }
   }, [pieces, getGridCell, canPlaceAt, doPlace]);
 
