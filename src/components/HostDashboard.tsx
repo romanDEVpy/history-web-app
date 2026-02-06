@@ -134,7 +134,7 @@ export default function HostDashboard() {
             <motion.div animate={{ rotate: [0, 1, -1, 0] }} transition={{ duration: 20, repeat: Infinity }}>
               <LiquidBlob progress={overallProgress} voteRatio={voteRatio} size={0.9} />
             </motion.div>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-slate-400">Состояние реформы</p>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-slate-400">для сдвгшников</p>
             <GlassCard className="w-full p-4 space-y-3">
               <StatRow label="Пазл (губернии)" value={state.shipTaps} color="#3b82f6" />
               <StatRow label="Пазл (регламент)" value={state.cityTaps} color="#22c55e" />
