@@ -7,8 +7,9 @@ import GooeyButton from "./GooeyButton";
 import LiquidBackground from "./LiquidBackground";
 import ParticleField from "./ParticleField";
 import MorphingSVG from "./MorphingSVG";
+import BlockPuzzle from "./BlockPuzzle";
 import { motion, AnimatePresence } from "framer-motion";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const IND_LABELS = ["Металлургия", "Текстиль", "Кораблестроение", "Стекло"];
 const IND_COLORS = ["#ef4444", "#3b82f6", "#22c55e", "#a855f7"];
@@ -75,12 +76,12 @@ export default function PlayerMobile() {
           >
             {slide.type === "wait" && <WaitView />}
             {slide.type === "info" && <InfoView slide={slide} />}
-            {slide.type === "activity_ships" && <TapActivity endpoint="/api/tap" title="Создание Флота" subtitle="Стучите, чтобы строить корабли!" total={state.shipTaps} emoji="⚓" color="#3b82f6" />}
+            {slide.type === "activity_ships" && <BlockPuzzle endpoint="/api/tap" title="Создание Флота" subtitle="Соберите линии, чтобы построить корабли!" themeColor="#3b82f6" total={state.shipTaps} goal={3} />}
             {slide.type === "activity_beard" && <BeardActivity votes={state.beardVotes} />}
             {slide.type === "activity_senate" && <SenateActivity senate={state.senate} />}
             {slide.type === "quiz_alphabet" && <QuizActivity slide={slide} quiz={state.quiz} endpoint="/api/quiz" />}
             {slide.type === "info_calendar" && <CalendarView />}
-            {slide.type === "activity_city" && <TapActivity endpoint="/api/city" title="Строительство Петербурга" subtitle="Каждое нажатие — камень в фундамент!" total={state.cityTaps} emoji="🏗️" color="#22c55e" />}
+            {slide.type === "activity_city" && <BlockPuzzle endpoint="/api/city" title="Строительство Петербурга" subtitle="Соберите линии, чтобы возвести город!" themeColor="#22c55e" total={state.cityTaps} goal={3} />}
             {slide.type === "activity_industry" && <IndustryActivity industry={state.industry} />}
             {slide.type === "info_ranks" && <InfoView slide={slide} />}
             {slide.type === "finale" && <FinaleView />}
@@ -139,53 +140,6 @@ function InfoView({ slide }: { slide: { title: string; subtitle?: string; body?:
   );
 }
 
-function TapActivity({ endpoint, title, subtitle, total, emoji, color }: {
-  endpoint: string; title: string; subtitle: string; total: number; emoji: string; color: string;
-}) {
-  const [localTaps, setLocalTaps] = useState(0);
-  const pendingRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const flush = useCallback(() => {
-    if (pendingRef.current > 0) {
-      const amount = pendingRef.current;
-      pendingRef.current = 0;
-      fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount }) });
-    }
-  }, [endpoint]);
-
-  const handleTap = useCallback(() => {
-    setLocalTaps((t) => t + 1);
-    pendingRef.current += 1;
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(flush, 300);
-  }, [flush]);
-
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); flush(); }, [flush]);
-
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-5">
-      <h2 className="font-serif text-xl text-white/80">{title}</h2>
-      <p className="font-mono text-xs text-white/30">{subtitle}</p>
-      <motion.button onTap={handleTap}
-        className="relative flex h-44 w-44 items-center justify-center rounded-full border"
-        style={{ borderColor: `${color}44`, background: `${color}11`, boxShadow: `0 0 60px ${color}15, inset 0 0 30px ${color}10`, backdropFilter: "blur(20px)" }}
-        whileTap={{ scale: 0.85, backgroundColor: `${color}33` }}
-        transition={{ type: "spring", stiffness: 600, damping: 15 }}
-      >
-        <motion.div key={localTaps} className="absolute inset-0 rounded-full border-2" style={{ borderColor: `${color}55` }}
-          initial={{ scale: 1, opacity: 0.5 }} animate={{ scale: 1.6, opacity: 0 }} transition={{ duration: 0.6 }} />
-        <motion.div key={`inner-${localTaps}`} className="absolute inset-4 rounded-full" style={{ background: `${color}22` }}
-          initial={{ scale: 1.3, opacity: 0.8 }} animate={{ scale: 1, opacity: 0 }} transition={{ duration: 0.3 }} />
-        <div className="flex flex-col items-center">
-          <span className="text-3xl mb-1">{emoji}</span>
-          <span className="font-serif text-4xl" style={{ color }}>{localTaps}</span>
-        </div>
-      </motion.button>
-      <p className="font-mono text-xs text-white/20">Всего: {total}</p>
-    </div>
-  );
-}
 
 function BeardActivity({ votes }: { votes: { yes: number; no: number } }) {
   const [voted, setVoted] = useState(false);

@@ -9,13 +9,10 @@ import LiquidBackground from "./LiquidBackground";
 import ParticleField from "./ParticleField";
 import FloatingIcons from "./FloatingIcons";
 import TimelineBar from "./TimelineBar";
-import WaveProgress from "./WaveProgress";
 import AnimatedCounter from "./AnimatedCounter";
 import MorphingSVG from "./MorphingSVG";
 import { motion, AnimatePresence } from "framer-motion";
 
-const SHIP_GOAL = 200;
-const CITY_GOAL = 500;
 
 const RANKS_DATA = [
   { rank: "I", title: "Канцлер / Генерал-фельдмаршал", color: "text-amber-300" },
@@ -34,8 +31,6 @@ export default function HostDashboard() {
   const slide = SLIDES[state.currentSlide] ?? SLIDES[0];
   const totalVotes = state.beardVotes.yes + state.beardVotes.no;
   const voteRatio = totalVotes > 0 ? (state.beardVotes.yes - state.beardVotes.no) / totalVotes : 0;
-  const shipProgress = Math.min(state.shipTaps / SHIP_GOAL, 1);
-  const cityProgress = Math.min(state.cityTaps / CITY_GOAL, 1);
   const overallProgress = state.currentSlide / Math.max(SLIDES.length - 1, 1);
 
   const canPrev = state.currentSlide > 0;
@@ -114,8 +109,7 @@ export default function HostDashboard() {
                       ))}
                     </div>
                   )}
-                  <HostSlideContent slide={slide} state={state} shipProgress={shipProgress} cityProgress={cityProgress} totalVotes={totalVotes} />
-                  {slide.hostInstruction && <motion.p className="mt-6 border-t border-white/5 pt-4 font-mono text-xs text-white/30" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>{slide.hostInstruction}</motion.p>}
+                  <HostSlideContent slide={slide} state={state} totalVotes={totalVotes} />
                 </GlassCard>
               </motion.div>
             </AnimatePresence>
@@ -142,8 +136,8 @@ export default function HostDashboard() {
             </motion.div>
             <p className="font-mono text-[10px] uppercase tracking-widest text-white/20">Состояние Империи</p>
             <GlassCard className="w-full p-4 space-y-3">
-              <StatRow label="Удары (флот)" value={state.shipTaps} max={SHIP_GOAL} color="#3b82f6" />
-              <StatRow label="Камни (город)" value={state.cityTaps} max={CITY_GOAL} color="#22c55e" />
+              <StatRow label="Пазл (флот)" value={state.shipTaps} color="#3b82f6" />
+              <StatRow label="Пазл (город)" value={state.cityTaps} color="#22c55e" />
               <StatRow label="Голоса (борода)" value={totalVotes} color="#f59e0b" />
               <StatRow label="Ответы (квиз)" value={state.quiz.total} color="#a855f7" />
             </GlassCard>
@@ -156,8 +150,8 @@ export default function HostDashboard() {
 
 /* ── Slide-specific visuals ─────────────────────────────────────── */
 
-function HostSlideContent({ slide, state, shipProgress, cityProgress, totalVotes }: {
-  slide: SlideData; state: ReturnType<typeof useSessionState>["state"]; shipProgress: number; cityProgress: number; totalVotes: number;
+function HostSlideContent({ slide, state, totalVotes }: {
+  slide: SlideData; state: ReturnType<typeof useSessionState>["state"]; totalVotes: number;
 }) {
   if (slide.type === "wait") return (
     <div className="flex items-center justify-center py-8">
@@ -169,13 +163,18 @@ function HostSlideContent({ slide, state, shipProgress, cityProgress, totalVotes
   if (slide.type === "activity_ships") return (
     <div className="space-y-4">
       <div className="flex items-end justify-between">
-        <p className="font-mono text-sm text-white/40">Прогресс верфи</p>
-        <p className="font-mono text-2xl text-amber-300"><AnimatedCounter value={state.shipTaps} className="text-amber-300" /> <span className="text-sm text-white/30">/ {SHIP_GOAL}</span></p>
+        <p className="font-mono text-sm text-white/40">Головоломка: Верфь</p>
+        <p className="font-mono text-2xl text-amber-300"><AnimatedCounter value={state.shipTaps} className="text-amber-300" /> <span className="text-sm text-white/30">решили</span></p>
       </div>
-      <WaveProgress progress={shipProgress} color="#3b82f6" height={80} label={shipProgress >= 1 ? "Флот построен!" : `${Math.round(shipProgress * 100)}%`} />
-      <div className="flex gap-2">{Array.from({ length: Math.min(Math.floor(state.shipTaps / 40), 5) }).map((_, i) => (
-        <motion.span key={i} initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: i * 0.1, type: "spring" }} className="text-2xl">⛵</motion.span>
-      ))}</div>
+      <div className="flex items-center gap-4 py-4">
+        <MorphingSVG variant="ship" className="h-20 w-20 opacity-30" color="#3b82f6" />
+        <div className="flex-1">
+          <p className="font-mono text-xs text-white/30 mb-2">Участники собирают блоки</p>
+          <div className="flex gap-1 flex-wrap">{Array.from({ length: Math.min(state.shipTaps, 20) }).map((_, i) => (
+            <motion.span key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: i * 0.05, type: "spring" }} className="text-lg">⛵</motion.span>
+          ))}</div>
+        </div>
+      </div>
     </div>
   );
 
@@ -216,9 +215,9 @@ function HostSlideContent({ slide, state, shipProgress, cityProgress, totalVotes
         const pct = total > 0 ? (count / total) * 100 : 0;
         return (
           <div key={i} className="relative overflow-hidden rounded-xl border border-white/10 bg-white/5 p-3">
-            <motion.div className="absolute inset-y-0 left-0 rounded-xl" style={{ background: opt.correct ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.05)" }} animate={{ width: `${pct}%` }} transition={{ type: "spring", stiffness: 60 }} />
+            <motion.div className="absolute inset-y-0 left-0 rounded-xl" style={{ background: "rgba(255,255,255,0.05)" }} animate={{ width: `${pct}%` }} transition={{ type: "spring", stiffness: 60 }} />
             <div className="relative flex items-center justify-between">
-              <span className={`text-sm ${opt.correct ? "text-green-400" : "text-white/60"}`}>{opt.correct && "✓ "}{opt.label}</span>
+              <span className="text-sm text-white/60">{opt.label}</span>
               <span className="font-mono text-xs text-white/40">{count} ({Math.round(pct)}%)</span>
             </div>
           </div>
@@ -238,14 +237,19 @@ function HostSlideContent({ slide, state, shipProgress, cityProgress, totalVotes
   if (slide.type === "activity_city") return (
     <div className="space-y-4">
       <div className="flex items-end justify-between">
-        <p className="font-mono text-sm text-white/40">Строительство</p>
-        <p className="font-mono text-2xl text-green-400"><AnimatedCounter value={state.cityTaps} className="text-green-400" /> <span className="text-sm text-white/30">/ {CITY_GOAL}</span></p>
+        <p className="font-mono text-sm text-white/40">Головоломка: Петербург</p>
+        <p className="font-mono text-2xl text-green-400"><AnimatedCounter value={state.cityTaps} className="text-green-400" /> <span className="text-sm text-white/30">решили</span></p>
       </div>
-      <WaveProgress progress={cityProgress} color="#22c55e" height={80} label={cityProgress >= 1 ? "Город построен!" : `${Math.round(cityProgress * 100)}%`} />
-      <div className="flex gap-1">{Array.from({ length: Math.min(Math.floor(state.cityTaps / 50), 10) }).map((_, i) => (
-        <motion.div key={i} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: i * 0.05, type: "spring" }}
-          className="h-6 flex-1 rounded-t-sm border border-white/10" style={{ background: `linear-gradient(180deg, rgba(34,197,94,${0.15 + i * 0.03}), rgba(34,197,94,0.05))` }} />
-      ))}</div>
+      <div className="flex items-center gap-4 py-4">
+        <MorphingSVG variant="city" className="h-20 w-20 opacity-30" color="#22c55e" />
+        <div className="flex-1">
+          <p className="font-mono text-xs text-white/30 mb-2">Участники собирают блоки</p>
+          <div className="flex gap-1 flex-wrap">{Array.from({ length: Math.min(state.cityTaps, 20) }).map((_, i) => (
+            <motion.div key={i} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: i * 0.05, type: "spring" }}
+              className="h-6 w-6 rounded-sm border border-white/10" style={{ background: `linear-gradient(180deg, rgba(34,197,94,${0.2 + i * 0.02}), rgba(34,197,94,0.05))` }} />
+          ))}</div>
+        </div>
+      </div>
     </div>
   );
 
