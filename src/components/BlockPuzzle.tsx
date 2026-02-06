@@ -265,9 +265,9 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring" }}>
           <GlassCard className="p-8 text-center" glow={0.6}>
             <motion.p className="text-5xl mb-4" animate={{ rotate: [0, 10, -10, 0], y: [0, -6, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>🏆</motion.p>
-            <h2 className="font-serif text-xl text-white/90 mb-2">Головоломка решена!</h2>
-            <p className="font-mono text-xs text-amber-300/80">Линий собрано: {cleared}</p>
-            <p className="font-mono text-xs text-white/30 mt-2">Решили: {total} чел.</p>
+            <h2 className="font-serif text-xl text-slate-800 mb-2">Головоломка решена!</h2>
+            <p className="font-mono text-xs text-amber-600">Линий собрано: {cleared}</p>
+            <p className="font-mono text-xs text-slate-400 mt-2">Решили: {total} чел.</p>
           </GlassCard>
         </motion.div>
       </div>
@@ -277,13 +277,13 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
   /* ── Render: main ──────────────────────────────────────────── */
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 px-1">
-      <h2 className="font-serif text-lg text-white/80">{title}</h2>
-      <p className="font-mono text-[10px] text-white/30">{subtitle}</p>
+      <h2 className="font-serif text-lg text-slate-700">{title}</h2>
+      <p className="font-mono text-[10px] text-slate-400">{subtitle}</p>
 
       {/* Progress bar */}
       <div className="flex items-center gap-2">
-        <span className="font-mono text-xs text-white/40">{cleared}/{goal}</span>
-        <div className="h-1.5 w-20 rounded-full bg-white/10 overflow-hidden">
+        <span className="font-mono text-xs text-slate-500">{cleared}/{goal}</span>
+        <div className="h-1.5 w-20 rounded-full bg-black/[0.06] overflow-hidden">
           <motion.div className="h-full rounded-full" style={{ background: themeColor }}
             animate={{ width: `${Math.min(cleared / goal, 1) * 100}%` }} transition={{ type: "spring" }} />
         </div>
@@ -293,7 +293,7 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
       <div
         ref={gridRef}
         onClick={handleGridTap}
-        className="rounded-lg border border-white/10 bg-black/20 p-1 backdrop-blur-sm"
+        className="rounded-lg border border-slate-200/80 bg-white/50 p-1 backdrop-blur-sm"
         style={{ width: "min(88vw, 340px)" }}
       >
         <div className="grid" style={{ gridTemplateColumns: `repeat(${GRID}, 1fr)`, gap: "2px" }}>
@@ -306,9 +306,9 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
             let bg: string, bc: string, shadow = "none";
 
             if (isFlash) {
-              bg = "rgba(255,255,255,0.4)";
-              bc = "rgba(255,255,255,0.7)";
-              shadow = "0 0 12px rgba(255,255,255,0.4)";
+              bg = "rgba(245,158,11,0.3)";
+              bc = "rgba(245,158,11,0.6)";
+              shadow = "0 0 12px rgba(245,158,11,0.3)";
             } else if (isPreview && cell === 0) {
               bg = previewValid ? `${themeColor}33` : "rgba(239,68,68,0.15)";
               bc = previewValid ? `${themeColor}88` : "rgba(239,68,68,0.4)";
@@ -318,8 +318,8 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
               bc = `${COLORS[ci]}88`;
               shadow = `inset 0 0 6px ${COLORS[ci]}22`;
             } else {
-              bg = "rgba(255,255,255,0.03)";
-              bc = "rgba(255,255,255,0.06)";
+              bg = "rgba(0,0,0,0.02)";
+              bc = "rgba(0,0,0,0.06)";
             }
 
             return (
@@ -342,7 +342,7 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
       <div className="flex items-end justify-center gap-3 min-h-[80px] relative" style={{ zIndex: 10 }}>
         {pieces.map((piece, idx) => {
           if (!piece) return (
-            <div key={idx} className="w-16 h-16 rounded-lg border border-dashed border-white/5 opacity-30" />
+            <div key={idx} className="w-16 h-16 rounded-lg border border-dashed border-slate-200 opacity-30" />
           );
           const isSel = selected === idx;
           const maxR = Math.max(...piece.map(([r]) => r)) + 1;
@@ -363,11 +363,11 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
               whileDrag={{
                 scale: 1.2,
                 zIndex: 100,
-                boxShadow: "0 16px 40px rgba(0,0,0,0.5), 0 0 20px rgba(245,158,11,0.15)",
+                boxShadow: "0 16px 40px rgba(0,0,0,0.15), 0 0 20px rgba(245,158,11,0.1)",
               }}
               animate={isSel ? { y: -6, scale: 1.08 } : { y: 0, scale: 1 }}
               className={`rounded-lg border p-2 cursor-grab active:cursor-grabbing touch-none select-none ${
-                isSel ? "border-amber-400/60 bg-amber-400/10" : "border-white/10 bg-white/5"
+                isSel ? "border-amber-500/60 bg-amber-500/10" : "border-slate-200 bg-black/[0.03]"
               }`}
               style={{ zIndex: isSel ? 5 : 1 }}
             >
@@ -395,14 +395,14 @@ export default function BlockPuzzle({ endpoint, title, subtitle, themeColor, tot
 
       {/* Controls */}
       <div className="flex gap-3">
-        <button onClick={skipPieces} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[10px] text-white/40 active:bg-white/10 transition-colors">
+        <button onClick={skipPieces} className="rounded-full border border-slate-200 bg-black/[0.03] px-3 py-1 font-mono text-[10px] text-slate-500 active:bg-black/[0.06] transition-colors">
           Другие блоки
         </button>
-        <button onClick={resetBoard} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[10px] text-white/40 active:bg-white/10 transition-colors">
+        <button onClick={resetBoard} className="rounded-full border border-slate-200 bg-black/[0.03] px-3 py-1 font-mono text-[10px] text-slate-500 active:bg-black/[0.06] transition-colors">
           Очистить поле
         </button>
       </div>
-      <p className="font-mono text-[9px] text-white/15">Перетащите блок на поле • Соберите линию целиком</p>
+      <p className="font-mono text-[9px] text-slate-300">Перетащите блок на поле • Соберите линию целиком</p>
     </div>
   );
 }
